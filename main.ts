@@ -1,14 +1,13 @@
-// Handover script for the Solmar City 3D entry in make.fun's gta6-01 bounty.
-// Runs on Node 22 with nothing but the standard library. The game itself is
-// a folder of static files (game/index.html plus its ES modules and the
-// vendored three.js build, no network calls). This script gathers that folder
-// and the screenshots folder into the output directory and writes
-// dossier.json — the short summary the judges read — through the vendored
-// make.fun helper.
+// Handover script for the Solmar City v3 entry in make.fun's gta6-01 bounty.
+// Node 22, standard library only. The game is a folder of static files
+// (game/index.html plus its ES modules and the vendored three.js build, no
+// network calls). This script copies that folder and the screenshots folder
+// into the output directory and writes dossier.json — the short summary the
+// judges read — through the vendored make.fun helper.
 //
 // To try the game first: `node serve.ts`, then open http://localhost:8080.
-// When grading outside the judge container, set MAKEFUN_OUTPUT_DIR to stand
-// in for /output, e.g.:
+// Outside the judge container, set MAKEFUN_OUTPUT_DIR to stand in for
+// /output, e.g.:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -24,7 +23,7 @@ cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
 mkdirSync(join(out, 'screenshots'), { recursive: true });
 if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 
-// Caps taken from the scorer's own gate: text_max_bytes is the only one that
+// Caps from the scorer's own gate: text_max_bytes is the only one that
 // changes the dossier's size; the rest mirror what the scorer refuses —
 // over 4 screenshots, any screenshot over 256 KiB, over 993 files in game/
 // or 48 MiB of game files in total, or any game path longer than 1000 bytes.
