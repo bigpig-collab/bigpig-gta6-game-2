@@ -1,21 +1,22 @@
-// World state + the fixed-step simulation. Owns the player, cars, peds,
+// World state and the fixed-step simulation. Owns the player, cars, peds,
 // cops, bullets, wanted level, missions and timers; each subsystem lives in
 // its own module and is called from here in a fixed order.
 import { STEP, WORLD_W, WORLD_H, PLACES, MONEY_START, PLAYER } from './config.js';
-import { makeRng, hashSeed, clamp, dist } from './random.js';
+import { makeRng, hashSeed, dist } from './random.js';
 import { buildCity, hitsBuilding } from './city.js';
 import { makePlayer, stepPlayerOnFoot, tryEnterCar, hurtPlayer, hurtVictim } from './player.js';
 import { makeCar, resetCarIds, spawnTrafficCar, stepPlayerCar, stepTrafficCar, collideCars, damageCar } from './vehicles.js';
 import { stepPolice, applyRespawn } from './police.js';
 import { makePed, spawnPeds, stepPeds } from './peds.js';
 import { startMission, updateMission } from './missions.js';
-import { updateAudio, sfx } from './audio.js';
+import { updateAudio } from './audio.js';
 import { applySave } from './save.js';
 
 export function createWorld(seed) {
   resetCarIds();
-  const rng = makeRng(typeof seed === 'number' ? seed : hashSeed(String(seed)));
-  const city = buildCity(typeof seed === 'number' ? seed : hashSeed(String(seed)));
+  const numericSeed = typeof seed === 'number' ? seed : hashSeed(String(seed));
+  const rng = makeRng(numericSeed);
+  const city = buildCity(numericSeed);
   const state = {
     seed, rng, city,
     time: 0,
@@ -50,8 +51,8 @@ export function resetWorld(state, seed) {
   for (const k of Object.keys(fresh)) state[k] = fresh[k];
 }
 
-// One fixed step. `inp` is the live or scripted input; `aim` is a world
-// point the player faces / shoots toward.
+// One fixed step. `inp` is the live or scripted input; `aim` is the world
+// point the player faces and shoots toward.
 export function stepWorld(state, dt, inp, aim) {
   if (state.over) {
     state.overTimer += dt;
@@ -78,7 +79,7 @@ export function stepWorld(state, dt, inp, aim) {
   stepPeds(state, dt, state.rng);
   collideCars(state);
 
-  // Bullets fly, hit buildings / people / cars / the player.
+  // Bullets fly and hit buildings, people, cars, or the player.
   for (const b of state.bullets) {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
@@ -91,19 +92,26 @@ export function stepWorld(state, dt, inp, aim) {
       for (const ped of state.peds) {
         if (ped.hp > 0 && dist(b.x, b.y, ped.x, ped.y) < 16) {
           hurtVictim(state, ped, PLAYER.pistolDamage, true);
-          hit = true; break;
+          hit = true;
+          break;
         }
       }
-      if (!hit) for (const cop of state.cops) {
-        if (cop.hp > 0 && dist(b.x, b.y, cop.x, cop.y) < 16) {
-          hurtVictim(state, cop, PLAYER.pistolDamage, true);
-          hit = true; break;
+      if (!hit) {
+        for (const cop of state.cops) {
+          if (cop.hp > 0 && dist(b.x, b.y, cop.x, cop.y) < 16) {
+            hurtVictim(state, cop, PLAYER.pistolDamage, true);
+            hit = true;
+            break;
+          }
         }
       }
-      if (!hit) for (const car of state.cars) {
-        if (!car.dead && dist(b.x, b.y, car.x, car.y) < 26) {
-          damageCar(state, car, 12);
-          hit = true; break;
+      if (!hit) {
+        for (const car of state.cars) {
+          if (!car.dead && dist(b.x, b.y, car.x, car.y) < 26) {
+            damageCar(state, car, 12);
+            hit = true;
+            break;
+          }
         }
       }
     }
@@ -127,7 +135,8 @@ export function stepWorld(state, dt, inp, aim) {
   });
 
   updateMission(state, dt);
-  updateAudio(p.inCar ? Math.abs((state.cars.find((c) => c.id === p.inCar) || { speed: 0 }).speed) / 470 : 0, state.wanted, !!p.inCar);
+  const driven = p.inCar ? state.cars.find((c) => c.id === p.inCar) : null;
+  updateAudio(driven ? Math.abs(driven.speed) / 470 : 0, state.wanted, !!p.inCar);
 
   if (!p.inCar && dist(p.x, p.y, PLACES.safehouse.x, PLACES.safehouse.y) < 80) {
     state.nearSafehouse = true;
@@ -148,3 +157,5 @@ export function loadIntoWorld(state, data) {
   state.pendingNext = null;
   startMission(state, Math.min(data.missionIdx || 0, 5));
 }
+
+export { applyRespawn, makePed };

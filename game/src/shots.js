@@ -1,6 +1,6 @@
 // Staged screenshot scenes (?shot=chase|street|drive|fight). Each one plays
 // the real rules forward from a fresh world for a fixed number of steps,
-// steered by a tiny autopilot, so the frame is what real play looks like
+// steered by a small autopilot, so the frame is what real play looks like
 // and the same seed always gives the same frame.
 import { STEP, PLACES } from './config.js';
 import { dist, turnToward } from './random.js';
@@ -25,7 +25,8 @@ function driveToward(state, inp, tx, ty) {
 
 function walkToward(state, inp, tx, ty) {
   const p = state.player;
-  const dx = tx - p.x; const dy = ty - p.y;
+  const dx = tx - p.x;
+  const dy = ty - p.y;
   inp.up = dy < -12;
   inp.down = dy > 12;
   inp.left = dx < -12;
@@ -48,7 +49,7 @@ export function stageShot(name, state) {
   const aim = { x: 0, y: 0 };
 
   if (name === 'chase') {
-    // Cover: police chase in a car, 3 stars, cops behind, HUD + objective.
+    // Cover: a police chase in a car at 3 stars, HUD + objective on screen.
     const car = makeCar(state.rng, 'sports', 1300, 1000, 0);
     car.color = '#e74c3c';
     state.cars.push(car);
@@ -70,14 +71,16 @@ export function stageShot(name, state) {
       stepWorld(state, STEP, inp, aim);
     }
     // Stage the frozen frame: the chase camera looks forward, so the
-    // pursuing police must be ahead of the player to read in one frame.
-    // Put three units ahead in a loose roadblock formation, facing the
-    // player, and one more closing from the side.
+    // pursuing police must sit ahead of the player to read in one frame.
+    // Three units ahead in a loose roadblock formation, facing the player,
+    // and one more closing from the side.
     {
       const pc = state.cars.filter((c) => c.isPolice && !c.dead);
       const p = state.player;
-      const fx = Math.cos(p.angle); const fy = Math.sin(p.angle);
-      const lx = -fy; const ly = fx;
+      const fx = Math.cos(p.angle);
+      const fy = Math.sin(p.angle);
+      const lx = -fy;
+      const ly = fx;
       const spots = [[280, 70], [330, -70], [200, 130], [420, 0]];
       pc.forEach((cop, i) => {
         const [f, l] = spots[i % spots.length];
@@ -105,61 +108,101 @@ export function stageShot(name, state) {
       driveToward(state, inp, 2600, 1500);
       stepWorld(state, STEP, inp, aim);
     }
+    // Stage the frozen frame: snap the car cleanly onto the beach road
+    // heading south, and clear any traffic right behind it so the player
+    // car — not a truck bumper — is the subject.
+    {
+      const pc = state.cars.find((c) => c.id === state.player.inCar);
+      if (pc) {
+        pc.x = 2600;
+        pc.y = 1100;
+        pc.angle = Math.PI / 2;
+        pc.speed = 200;
+        state.player.x = pc.x;
+        state.player.y = pc.y;
+        state.player.angle = pc.angle;
+      }
+      state.cars = state.cars.filter((c) => {
+        if (c.id === state.player.inCar || c.isPolice || c.marked) return true;
+        return dist(c.x, c.y, state.player.x, state.player.y) > 300;
+      });
+    }
     return { screen: SCREEN_PLAY };
   }
 
   if (name === 'fight') {
     // Port shootout: mission 5, rivals at the docks, player firing.
     startMission(state, 4);
-    state.player.x = 2480; state.player.y = 1960;
+    state.player.x = 2480;
+    state.player.y = 1960;
     state.player.ammo = 120;
     for (let i = 0; i < 150; i += 1) {
-      let best = null; let bd = Infinity;
+      let best = null;
+      let bd = Infinity;
       for (const cop of state.cops) {
         if (cop.hp <= 0) continue;
         const d = dist(cop.x, cop.y, state.player.x, state.player.y);
         if (d < bd) { bd = d; best = cop; }
       }
       if (best) {
-        aim.x = best.x; aim.y = best.y;
+        aim.x = best.x;
+        aim.y = best.y;
         inp.shoot = bd < 520;
         inp.left = i % 120 < 60;
         inp.right = i % 120 >= 60;
       }
       stepWorld(state, STEP, inp, aim);
-      inp.shoot = false; inp.left = false; inp.right = false;
+      inp.shoot = false;
+      inp.left = false;
+      inp.right = false;
     }
     const p = state.player;
     // Stage the frozen frame on open ground: the port road (x=2600) so no
     // warehouse roof blocks the camera, and north of the Port Docks sign
     // so the sign stays behind the camera. Player faces the nearest rival.
-    p.x = 2600; p.y = 1900;
-    let nearest = null; let nd = Infinity;
+    p.x = 2600;
+    p.y = 1900;
+    let nearest = null;
+    let nd = Infinity;
     for (const cop of state.cops) {
       if (cop.hp <= 0) continue;
       const d = dist(cop.x, cop.y, p.x, p.y);
       if (d < nd) { nd = d; nearest = cop; }
     }
     if (nearest) {
-      nearest.x = 2600; nearest.y = 1720;
+      nearest.x = 2600;
+      nearest.y = 1720;
       nearest.angle = Math.atan2(p.y - nearest.y, p.x - nearest.x);
       p.angle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
     }
     for (const car of state.cars) {
       if (!car.isPolice || car.dead) continue;
       if (dist(car.x, car.y, p.x, p.y) < 150) {
-        car.x = p.x - 320; car.y = p.y + 40; car.angle = 0; car.speed = 0;
+        car.x = p.x - 320;
+        car.y = p.y + 40;
+        car.angle = 0;
+        car.speed = 0;
       }
     }
     return { screen: SCREEN_PLAY };
   }
 
   // Default: street — on foot downtown, mission 1, traffic + peds + marker.
-  state.player.x = 1500; state.player.y = 1250;
+  state.player.x = 1500;
+  state.player.y = 1250;
   state.player.angle = -Math.PI / 2;
   for (let i = 0; i < 300; i += 1) {
     walkToward(state, inp, PLACES.bar.x, PLACES.bar.y);
     stepWorld(state, STEP, inp, aim);
+  }
+  // Stage the frozen frame: step back onto the road south of the bar and
+  // face it, so the sign, the player and the street all read in one frame
+  // instead of the camera pressing against the bar wall.
+  if (state.missionDone >= 1) {
+    state.player.x = 1180;
+    state.player.y = 970;
+    state.player.angle = -Math.PI / 2;
+    state.objective = { x: PLACES.bar.x, y: PLACES.bar.y, label: "Drive to Rosa's Bar" };
   }
   return { screen: SCREEN_PLAY };
 }

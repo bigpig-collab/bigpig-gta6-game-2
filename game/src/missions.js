@@ -1,6 +1,7 @@
-// The six-mission story chain from fixer Mama Rosa. Each mission has a
-// briefing (shown as dialogue), an objective that moves the minimap blip,
-// and a cash reward. Free roam between missions.
+// The six-job story chain from fixer Mama Rosa. Each job has a briefing
+// (shown as dialogue), an objective that moves the minimap blip, and a cash
+// reward. Free roam between jobs; the next job starts a few seconds after
+// the last one pays out.
 import { PLACES } from './config.js';
 import { dist } from './random.js';
 import { makeCar } from './vehicles.js';
@@ -57,15 +58,22 @@ export function startMission(state, idx) {
   };
   state.dialogue = m.briefing;
   state.dialogueTimer = 5;
-  state.objective = m.target ? { x: m.target.x, y: m.target.y, label: m.objective } : { x: 0, y: 0, label: m.objective };
+  state.objective = m.target
+    ? { x: m.target.x, y: m.target.y, label: m.objective }
+    : { x: 0, y: 0, label: m.objective };
   if (m.type === 'steal' || m.type === 'deliver') {
-    const spot = m.type === 'deliver' ? PLACES.heistCar : { x: state.player.x + 260, y: state.player.y + 120 };
+    const spot = m.type === 'deliver'
+      ? PLACES.heistCar
+      : { x: state.player.x + 260, y: state.player.y + 120 };
     const car = makeCar(state.rng, 'sports', spot.x, spot.y, 0);
     car.traffic = false;
     car.marked = true;
     state.cars.push(car);
     state.mission.targetCarId = car.id;
-    state.objective = { x: car.x, y: car.y, label: m.type === 'deliver' ? 'Steal the heist car' : 'Steal the marked sports car' };
+    state.objective = {
+      x: car.x, y: car.y,
+      label: m.type === 'deliver' ? 'Steal the heist car' : 'Steal the marked sports car',
+    };
   }
   if (m.type === 'escape') {
     state.wanted = 3;
@@ -127,7 +135,7 @@ export function updateMission(state, dt) {
       if (p.inCar === m.targetCarId) {
         m.stage = 'deliver';
         state.objective = { x: m.target.x, y: m.target.y, label: 'Deliver the car to the bar' };
-        state.message = 'Deliver it to Rosa\'s Bar.';
+        state.message = "Deliver it to Rosa's Bar.";
         state.messageTimer = 2.5;
       }
     } else if (dist(p.x, p.y, m.target.x, m.target.y) < 90 && p.inCar === m.targetCarId) {

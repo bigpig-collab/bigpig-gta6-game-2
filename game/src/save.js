@@ -1,5 +1,5 @@
-// Save / load via localStorage, at the safehouse. Stores money, health,
-// ammo, mission progress, player position and time.
+// Save / load through localStorage, written at the safehouse. Only plain
+// progress is stored: money, health, ammo, position, mission progress.
 import { SAVE_KEY } from './config.js';
 
 export function saveGame(state) {

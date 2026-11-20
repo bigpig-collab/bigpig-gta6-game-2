@@ -1,5 +1,6 @@
-// The player on foot: walking/running, punching, shooting, entering cars.
-// When driving, the car owns the motion and this module only handles exit.
+// The player on foot: walking and running, punching, shooting the pistol,
+// and getting in and out of cars. While driving, the car owns the motion
+// and this module only handles the exit.
 import { PLAYER, WORLD_W, WORLD_H } from './config.js';
 import { clamp } from './random.js';
 import { hitsBuilding } from './city.js';
@@ -14,7 +15,7 @@ export function makePlayer(x, y) {
   };
 }
 
-// Move on foot. `aim` is a world-space aim point.
+// Move on foot. `aim` is a world-space point the player faces and shoots at.
 export function stepPlayerOnFoot(state, dt, inp, aim) {
   const p = state.player;
   p.fireCd = Math.max(0, p.fireCd - dt);
@@ -36,7 +37,8 @@ export function stepPlayerOnFoot(state, dt, inp, aim) {
   else if (len > 0) p.angle = Math.atan2(my, mx);
 
   if (inp.punch && p.punchCd <= 0) {
-    p.punchCd = 0.45; p.punchAnim = 0.25;
+    p.punchCd = 0.45;
+    p.punchAnim = 0.25;
     sfx.punch();
     const target = nearestVictim(state, p.x + Math.cos(p.angle) * 20, p.y + Math.sin(p.angle) * 20, PLAYER.punchRange);
     if (target) hurtVictim(state, target, PLAYER.punchDamage, true);
@@ -56,7 +58,8 @@ export function stepPlayerOnFoot(state, dt, inp, aim) {
 }
 
 export function nearestVictim(state, x, y, r) {
-  let best = null; let bd = r;
+  let best = null;
+  let bd = r;
   for (const ped of state.peds) {
     if (ped.hp <= 0) continue;
     const d = Math.hypot(ped.x - x, ped.y - y);
@@ -102,7 +105,7 @@ export function hurtPlayer(state, dmg) {
   }
 }
 
-// Enter the nearest car within range; exit to a free spot beside the car.
+// E: step out of the current car, or climb into the nearest car in range.
 export function tryEnterCar(state) {
   const p = state.player;
   if (p.inCar) {
@@ -111,7 +114,10 @@ export function tryEnterCar(state) {
       const sx = car.x + Math.cos(car.angle + Math.PI / 2) * 40;
       const sy = car.y + Math.sin(car.angle + Math.PI / 2) * 40;
       if (!hitsBuilding(state.city, sx, sy, 12)) { p.x = sx; p.y = sy; }
-      else { p.x = car.x - Math.cos(car.angle + Math.PI / 2) * 40; p.y = car.y - Math.sin(car.angle + Math.PI / 2) * 40; }
+      else {
+        p.x = car.x - Math.cos(car.angle + Math.PI / 2) * 40;
+        p.y = car.y - Math.sin(car.angle + Math.PI / 2) * 40;
+      }
       p.angle = car.angle;
       car.driver = null;
       p.inCar = null;
@@ -119,7 +125,8 @@ export function tryEnterCar(state) {
     }
     return;
   }
-  let best = null; let bd = 70;
+  let best = null;
+  let bd = 70;
   for (const car of state.cars) {
     if (car.dead) continue;
     const d = Math.hypot(car.x - p.x, car.y - p.y);
@@ -130,7 +137,9 @@ export function tryEnterCar(state) {
     best.driver = 'player';
     best.traffic = false;
     best.speed = 0;
-    p.x = best.x; p.y = best.y; p.angle = best.angle;
+    p.x = best.x;
+    p.y = best.y;
+    p.angle = best.angle;
     sfx.door();
     if (!best.stolen && best.model !== 'police') {
       best.stolen = true;

@@ -1,5 +1,6 @@
-// WebAudio synth only — no audio files. Engine hum, siren, gunshots,
-// pickup blips and a small synthwave radio loop, all generated live.
+// All sound is synthesized with WebAudio — no audio files. Engine hum and
+// siren are continuous oscillators; everything else is a short blip or a
+// burst of filtered noise. The radio is a tiny synthwave loop on a timer.
 let ctx = null;
 let master = null;
 let muted = false;
@@ -13,7 +14,10 @@ let radioStep = 0;
 export function isMuted() { return muted; }
 
 export function ensureAudio() {
-  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+  if (ctx) {
+    if (ctx.state === 'suspended') ctx.resume();
+    return;
+  }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     ctx = new AC();
@@ -55,8 +59,10 @@ function blip(freq, dur, type, vol, slideTo) {
   if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
   g.gain.setValueAtTime(vol || 0.15, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(master);
-  o.start(t); o.stop(t + dur + 0.02);
+  o.connect(g);
+  g.connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.02);
 }
 
 function noiseBurst(dur, vol, low) {
@@ -73,7 +79,9 @@ function noiseBurst(dur, vol, low) {
   f.frequency.value = low || 1200;
   const g = ctx.createGain();
   g.gain.value = vol || 0.4;
-  src.connect(f); f.connect(g); g.connect(master);
+  src.connect(f);
+  f.connect(g);
+  g.connect(master);
   src.start(t);
 }
 
@@ -89,8 +97,7 @@ export const sfx = {
   crash() { noiseBurst(0.25, 0.45, 700); },
 };
 
-// Called every frame with the driving state: engine pitch follows speed,
-// siren wails while wanted >= 2.
+// Called every frame: engine pitch follows speed, siren wails at 2+ stars.
 export function updateAudio(speedFrac, wanted, driving) {
   if (!ctx) return;
   const t = ctx.currentTime;
@@ -105,7 +112,7 @@ export function updateAudio(speedFrac, wanted, driving) {
   }
 }
 
-// Tiny synthwave loop: bass + arp, scheduled on a timer. Starts on first user gesture.
+// Synthwave loop: bass note plus an arpeggio, one step per tick.
 const BASS = [55, 55, 65.4, 49];
 const ARP = [220, 261.6, 329.6, 392, 329.6, 261.6];
 export function startRadio() {

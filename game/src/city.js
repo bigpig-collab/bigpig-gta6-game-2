@@ -1,6 +1,6 @@
-// City generation: road grid, districts, buildings, trees, props.
-// Deterministic from the seed. Roads run every BLOCK px; buildings fill the
-// blocks between them. The east edge is beach + sea, the south edge is the port.
+// City layout: a road grid, districts, buildings, trees and props. All of it
+// is deterministic from the seed — roads every BLOCK, downtown towers in the
+// middle, beach on the east edge, port along the south edge, park west.
 import { WORLD_W, WORLD_H, BLOCK, ROAD_W } from './config.js';
 import { makeRng, pick, range } from './random.js';
 
@@ -25,15 +25,17 @@ export function onRoad(x, y) {
   return false;
 }
 export function nearJunction(x, y, r = 70) {
-  for (const rx of ROAD_XS) for (const ry of ROAD_YS) {
-    if (Math.abs(x - rx) < r && Math.abs(y - ry) < r) return true;
+  for (const rx of ROAD_XS) {
+    for (const ry of ROAD_YS) {
+      if (Math.abs(x - rx) < r && Math.abs(y - ry) < r) return true;
+    }
   }
   return false;
 }
 
-const DOWNTOWN = ['#b03a2e', '#2e5f8a', '#6c3483', '#1e8449', '#935116', '#7b7d7d'];
-const SUBURB = ['#e59866', '#f5b7b1', '#aed6f1', '#a9dfbf', '#f9e79f', '#d7bde2'];
-const PORTC = ['#5d6d7e', '#a93226', '#7d6608', '#2c3e50'];
+const TOWER_COLORS = ['#b03a2e', '#2e5f8a', '#6c3483', '#1e8449', '#935116', '#7b7d7d'];
+const HOUSE_COLORS = ['#e59866', '#f5b7b1', '#aed6f1', '#a9dfbf', '#f9e79f', '#d7bde2'];
+const DOCK_COLORS = ['#5d6d7e', '#a93226', '#7d6608', '#2c3e50'];
 
 export function districtAt(x, y) {
   if (x > 2780) return 'beach';
@@ -58,11 +60,15 @@ export function buildCity(seed) {
       const cy = (y0 + y1) / 2;
       const d = districtAt(cx, cy);
       if (d === 'beach') {
-        for (let i = 0; i < 3; i += 1) trees.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), palm: true });
+        for (let i = 0; i < 3; i += 1) {
+          trees.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), palm: true });
+        }
         continue;
       }
       if (d === 'park') {
-        for (let i = 0; i < 9; i += 1) trees.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), palm: false });
+        for (let i = 0; i < 9; i += 1) {
+          trees.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), palm: false });
+        }
         props.push({ x: cx, y: cy, kind: 'pond' });
         continue;
       }
@@ -70,19 +76,18 @@ export function buildCity(seed) {
         for (let i = 0; i < 4; i += 1) {
           props.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), kind: pick(rng, ['crate', 'container', 'container']) });
         }
-        buildings.push({ x: x0 + 20, y: y0 + 20, w: 120, h: 70, color: pick(rng, PORTC), tall: 0 });
+        buildings.push({ x: x0 + 20, y: y0 + 20, w: 120, h: 70, color: pick(rng, DOCK_COLORS), tall: 0, height: 55 });
         continue;
       }
-      const n = d === 'downtown' ? 2 : (rng() < 0.6 ? 2 : 3);
-      for (let i = 0; i < n; i += 1) {
+      const count = d === 'downtown' ? 2 : (rng() < 0.6 ? 2 : 3);
+      for (let i = 0; i < count; i += 1) {
         const w = d === 'downtown' ? range(rng, 90, 150) : range(rng, 70, 130);
         const h = d === 'downtown' ? range(rng, 80, 140) : range(rng, 60, 110);
         const px = x0 + ((i % 2) * (x1 - x0 - w)) + range(rng, 0, 12);
         const py = y0 + (Math.floor(i / 2) * (y1 - y0 - h)) + range(rng, 0, 12);
         buildings.push({
           x: px, y: py, w, h,
-          color: d === 'downtown' ? pick(rng, DOWNTOWN) : pick(rng, SUBURB),
-          // 3D height in world units: downtown towers rise high, suburbs stay low.
+          color: d === 'downtown' ? pick(rng, TOWER_COLORS) : pick(rng, HOUSE_COLORS),
           tall: d === 'downtown' ? Math.floor(range(rng, 1, 4)) : 0,
           height: d === 'downtown' ? range(rng, 150, 420) : range(rng, 45, 95),
         });
@@ -90,12 +95,14 @@ export function buildCity(seed) {
       if (rng() < 0.7) trees.push({ x: range(rng, x0, x1), y: range(rng, y0, y1), palm: false });
     }
   }
-  for (let i = 0; i < 8; i += 1) props.push({ x: 2830 + rng() * 130, y: 300 + i * 240 + rng() * 60, kind: 'umbrella' });
+  for (let i = 0; i < 8; i += 1) {
+    props.push({ x: 2830 + rng() * 130, y: 300 + i * 240 + rng() * 60, kind: 'umbrella' });
+  }
   for (let i = 0; i < 3; i += 1) props.push({ x: 600 + i * 900, y: 2280, kind: 'crane' });
   return { buildings, trees, props };
 }
 
-// Point-in-building test (for collision).
+// Point-in-building test used by movement and bullet collision.
 export function hitsBuilding(city, x, y, pad = 0) {
   for (const b of city.buildings) {
     if (x > b.x - pad && x < b.x + b.w + pad && y > b.y - pad && y < b.y + b.h + pad) return b;

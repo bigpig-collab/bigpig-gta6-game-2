@@ -1,10 +1,9 @@
-// DOM HUD + live 2D minimap (top-down canvas): roads, districts,
-// building dots, safehouse, pulsing mission blip, police/gang blips,
-// player dot with ring. All text updates are cheap string writes.
-import { WORLD_W, WORLD_H, CAR_MODELS } from './config.js';
+// DOM HUD plus the live 2D minimap (top-down canvas): roads, districts,
+// building dots, safehouse, pulsing mission blip, police/gang blips, and the
+// player dot with a ring. Text updates are cheap string writes.
+import { WORLD_W, WORLD_H, CAR_MODELS, PLACES } from './config.js';
 import { ROAD_XS, ROAD_YS } from './city.js';
 import { wantedLabel } from './police.js';
-import { PLACES } from './config.js';
 
 export function createHud() {
   return {
@@ -52,44 +51,67 @@ export function updateHud(hud, state) {
 
 function drawMinimap(canvas, state) {
   const ctx = canvas.getContext('2d');
-  const w = canvas.width; const h = canvas.height;
-  const sx = w / WORLD_W; const sy = h / WORLD_H;
-  ctx.fillStyle = '#1d3a24'; ctx.fillRect(0, 0, w, h);
-  // Beach + sea.
-  ctx.fillStyle = '#e8d29a'; ctx.fillRect(2780 * sx, 0, (WORLD_W - 2780) * sx, h);
-  ctx.fillStyle = '#2e86c1'; ctx.fillRect(3050 * sx, 0, (WORLD_W - 3050) * sx, h);
-  // Port.
-  ctx.fillStyle = '#5d6d7e'; ctx.fillRect(0, 1950 * sy, w, (WORLD_H - 1950) * sy);
-  // Park.
-  ctx.fillStyle = '#2e7d32'; ctx.fillRect(600 * sx, 1400 * sy, 400 * sx, 400 * sy);
+  const w = canvas.width;
+  const h = canvas.height;
+  const sx = w / WORLD_W;
+  const sy = h / WORLD_H;
+  ctx.fillStyle = '#1d3a24';
+  ctx.fillRect(0, 0, w, h);
+  // Beach + sea on the east edge.
+  ctx.fillStyle = '#e8d29a';
+  ctx.fillRect(2780 * sx, 0, (WORLD_W - 2780) * sx, h);
+  ctx.fillStyle = '#2e86c1';
+  ctx.fillRect(3050 * sx, 0, (WORLD_W - 3050) * sx, h);
+  // Port along the south edge, park to the west.
+  ctx.fillStyle = '#5d6d7e';
+  ctx.fillRect(0, 1950 * sy, w, (WORLD_H - 1950) * sy);
+  ctx.fillStyle = '#2e7d32';
+  ctx.fillRect(600 * sx, 1400 * sy, 400 * sx, 400 * sy);
   // Roads.
   ctx.fillStyle = '#3b4048';
   for (const rx of ROAD_XS) ctx.fillRect((rx - 48) * sx, 0, 96 * sx, h);
   for (const ry of ROAD_YS) ctx.fillRect(0, (ry - 48) * sy, w, 96 * sy);
   // Buildings.
   ctx.fillStyle = '#9aa0a6';
-  for (const b of state.city.buildings) ctx.fillRect(b.x * sx, b.y * sy, Math.max(2, b.w * sx), Math.max(2, b.h * sy));
-  // Safehouse.
+  for (const b of state.city.buildings) {
+    ctx.fillRect(b.x * sx, b.y * sy, Math.max(2, b.w * sx), Math.max(2, b.h * sy));
+  }
+  // Safehouse marker.
   ctx.fillStyle = '#2ecc71';
   ctx.fillRect((PLACES.safehouse.x - 14) * sx, (PLACES.safehouse.y - 14) * sy, 28 * sx + 3, 28 * sy + 3);
-  // Mission blip (pulsing yellow).
+  // Mission blip, pulsing yellow.
   if (state.objective.x) {
     const r = 5 + 2.5 * Math.sin(state.time * 5);
     ctx.fillStyle = '#ffe600';
-    ctx.beginPath(); ctx.arc(state.objective.x * sx, state.objective.y * sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(state.objective.x * sx, state.objective.y * sy, r, 0, Math.PI * 2);
+    ctx.fill();
   }
-  // Police (red) and gang (orange) blips.
+  // Police cars (red) and foot cops / gang (orange).
   ctx.fillStyle = '#ff2222';
-  for (const car of state.cars) if (car.isPolice && !car.dead) {
-    ctx.beginPath(); ctx.arc(car.x * sx, car.y * sy, 3, 0, Math.PI * 2); ctx.fill();
+  for (const car of state.cars) {
+    if (car.isPolice && !car.dead) {
+      ctx.beginPath();
+      ctx.arc(car.x * sx, car.y * sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.fillStyle = '#ff7b00';
-  for (const cop of state.cops) if (cop.hp > 0) {
-    ctx.beginPath(); ctx.arc(cop.x * sx, cop.y * sy, 3, 0, Math.PI * 2); ctx.fill();
+  for (const cop of state.cops) {
+    if (cop.hp > 0) {
+      ctx.beginPath();
+      ctx.arc(cop.x * sx, cop.y * sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  // Player dot with ring.
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.arc(state.player.x * sx, state.player.y * sy, 6, 0, Math.PI * 2); ctx.stroke();
+  // Player dot with a ring.
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(state.player.x * sx, state.player.y * sy, 6, 0, Math.PI * 2);
+  ctx.stroke();
   ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(state.player.x * sx, state.player.y * sy, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(state.player.x * sx, state.player.y * sy, 3, 0, Math.PI * 2);
+  ctx.fill();
 }

@@ -1,4 +1,4 @@
-// Cars: creation, player driving physics, traffic AI, collisions, damage.
+// Cars: factory, player driving physics, traffic AI, collisions, damage.
 import { CAR_MODELS, WORLD_W, WORLD_H, ROAD_W, STEP } from './config.js';
 import { clamp, pick, range, turnToward } from './random.js';
 import { hitsBuilding, nearJunction, nearestRoadX, nearestRoadY, onRoad } from './city.js';
@@ -14,13 +14,13 @@ export function makeCar(rng, model, x, y, angle) {
     color: pick(rng, spec.colors),
     traffic: false, driver: null, stolen: false,
     axis: 'h', dir: 1, lane: 0, wait: 0, cruise: range(rng, 110, 190),
-    smoke: 0, brakeLight: false,
+    smoke: 0, brakeLight: false, dead: false, isPolice: false, marked: false,
   };
 }
 
 export function resetCarIds() { nextId = 1; }
 
-// Spawn a traffic car on a random road, away from the player.
+// Drop a traffic car onto a random road, kept away from the player.
 export function spawnTrafficCar(state, rng) {
   const models = ['sedan', 'sedan', 'taxi', 'truck', 'van', 'sports'];
   const model = pick(rng, models);
@@ -35,8 +35,7 @@ export function spawnTrafficCar(state, rng) {
     y = range(rng, 150, WORLD_H - 150);
     angle = rng() < 0.5 ? Math.PI / 2 : -Math.PI / 2;
   }
-  const d = Math.hypot(x - state.player.x, y - state.player.y);
-  if (d < 420) return null;
+  if (Math.hypot(x - state.player.x, y - state.player.y) < 420) return null;
   const car = makeCar(rng, model, x, y, angle);
   car.traffic = true;
   car.axis = horiz ? 'h' : 'v';
@@ -45,8 +44,8 @@ export function spawnTrafficCar(state, rng) {
   return car;
 }
 
-// Player driving: arcade handling — throttle, steering scales with speed,
-// handbrake (Space) cuts grip and speed.
+// Player driving: arcade handling — throttle, speed-scaled steering, and a
+// handbrake (Space) that cuts grip and scrubs speed.
 export function stepPlayerCar(state, dt, inp) {
   const p = state.player;
   const car = state.cars.find((c) => c.id === p.inCar);
@@ -63,25 +62,30 @@ export function stepPlayerCar(state, dt, inp) {
   car.angle += steer * turnRate * dt * Math.sign(car.speed || 1);
   const nx = car.x + Math.cos(car.angle) * car.speed * dt;
   const ny = car.y + Math.sin(car.angle) * car.speed * dt;
-  const hit = hitsBuilding(state.city, nx, ny, 24);
-  if (hit) {
+  if (hitsBuilding(state.city, nx, ny, 24)) {
     if (Math.abs(car.speed) > 120) { damageCar(state, car, 14); sfx.crash(); }
     car.speed *= -0.25;
   } else {
     car.x = clamp(nx, 30, WORLD_W - 30);
     car.y = clamp(ny, 30, WORLD_H - 30);
   }
-  p.x = car.x; p.y = car.y; p.angle = car.angle; p.speed = Math.abs(car.speed);
+  p.x = car.x;
+  p.y = car.y;
+  p.angle = car.angle;
+  p.speed = Math.abs(car.speed);
   car.brakeLight = inp.brake || inp.down;
   car.smoke = car.hp < car.maxHp * 0.4 ? 1 : 0;
 }
 
 function carAhead(state, car, look) {
-  const ax = Math.cos(car.angle); const ay = Math.sin(car.angle);
-  let best = null; let bd = look;
+  const ax = Math.cos(car.angle);
+  const ay = Math.sin(car.angle);
+  let best = null;
+  let bd = look;
   for (const other of state.cars) {
     if (other === car) continue;
-    const dx = other.x - car.x; const dy = other.y - car.y;
+    const dx = other.x - car.x;
+    const dy = other.y - car.y;
     const along = dx * ax + dy * ay;
     const side = Math.abs(-dx * ay + dy * ax);
     if (along > 0 && along < bd && side < 34) { bd = along; best = other; }
@@ -89,8 +93,8 @@ function carAhead(state, car, look) {
   return best;
 }
 
-// Traffic: follow the road grid, turn at junctions sometimes, slow for the
-// car ahead, stop briefly at busy junctions.
+// Traffic: stick to the road grid, turn at junctions now and then, slow for
+// the car ahead, pause briefly at busy junctions.
 export function stepTrafficCar(state, car, dt, rng) {
   if (car.wait > 0) { car.wait -= dt; car.speed *= 0.9; return; }
   const ahead = carAhead(state, car, 110);
@@ -107,7 +111,8 @@ export function stepTrafficCar(state, car, dt, rng) {
   const nx = car.x + Math.cos(car.angle) * car.speed * dt;
   const ny = car.y + Math.sin(car.angle) * car.speed * dt;
   if (!hitsBuilding(state.city, nx, ny, 24) && onRoad(nx, ny)) {
-    car.x = nx; car.y = ny;
+    car.x = nx;
+    car.y = ny;
   } else {
     car.angle += Math.PI;
     car.speed *= 0.4;
@@ -133,32 +138,40 @@ export function damageCar(state, car, dmg) {
   }
 }
 
-// Simple pairwise car collision: push apart, exchange a little speed, damage.
+// Pairwise car collision: push apart, trade a little speed, chip damage.
 export function collideCars(state) {
   const cars = state.cars;
   for (const c of cars) c._hitCd = Math.max(0, (c._hitCd || 0) - STEP);
   for (let i = 0; i < cars.length; i += 1) {
     for (let j = i + 1; j < cars.length; j += 1) {
-      const a = cars[i]; const b = cars[j];
+      const a = cars[i];
+      const b = cars[j];
       if (a.dead || b.dead) continue;
-      const dx = b.x - a.x; const dy = b.y - a.y;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
       const d = Math.hypot(dx, dy);
       if (d < 52 && d > 0.01) {
         const push = (52 - d) / 2;
-        const ux = dx / d; const uy = dy / d;
-        a.x -= ux * push; a.y -= uy * push;
-        b.x += ux * push; b.y += uy * push;
+        const ux = dx / d;
+        const uy = dy / d;
+        a.x -= ux * push;
+        a.y -= uy * push;
+        b.x += ux * push;
+        b.y += uy * push;
         if (a._hitCd > 0 || b._hitCd > 0) continue;
         const rel = Math.abs(a.speed - b.speed);
         if (rel > 90) {
-          damageCar(state, a, 6); damageCar(state, b, 6);
+          damageCar(state, a, 6);
+          damageCar(state, b, 6);
           if (a.driver === 'player' || b.driver === 'player') sfx.crash();
           for (const ped of state.peds) {
             if (Math.hypot(ped.x - a.x, ped.y - a.y) < 160) ped.flee = 1;
           }
         }
-        a.speed *= 0.8; b.speed *= 0.8;
-        a._hitCd = 0.5; b._hitCd = 0.5;
+        a.speed *= 0.8;
+        b.speed *= 0.8;
+        a._hitCd = 0.5;
+        b._hitCd = 0.5;
       }
     }
   }

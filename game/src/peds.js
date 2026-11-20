@@ -1,5 +1,6 @@
-// Pedestrians: walk the sidewalks, chat in place, flee gunfire and crashes,
-// and scatter when a car bears down on them.
+// Pedestrians: stroll the sidewalks, idle and chat, and run from gunfire,
+// crashes and speeding cars. A car that hits a ped at speed knocks them
+// down — and the driver earns heat for it.
 import { WORLD_W, WORLD_H } from './config.js';
 import { clamp, dist, pick, range } from './random.js';
 import { hitsBuilding, nearestRoadX, nearestRoadY } from './city.js';
@@ -38,15 +39,21 @@ export function stepPeds(state, dt, rng) {
   for (const ped of state.peds) {
     if (ped.hp <= 0) continue;
     if (ped.flee > 0) ped.flee -= dt;
-    let fx = 0; let fy = 0;
+    let fx = 0;
+    let fy = 0;
     const dp = dist(ped.x, ped.y, p.x, p.y);
     if (ped.flee > 0 || dp < 90) {
-      fx = ped.x - p.x; fy = ped.y - p.y;
+      fx = ped.x - p.x;
+      fy = ped.y - p.y;
     } else {
       for (const car of state.cars) {
         if (car.dead) continue;
         const dc = dist(ped.x, ped.y, car.x, car.y);
-        if (dc < 90 && Math.abs(car.speed) > 60) { fx = ped.x - car.x; fy = ped.y - car.y; break; }
+        if (dc < 90 && Math.abs(car.speed) > 60) {
+          fx = ped.x - car.x;
+          fy = ped.y - car.y;
+          break;
+        }
       }
     }
     if (fx !== 0 || fy !== 0) {
@@ -62,7 +69,10 @@ export function stepPeds(state, dt, rng) {
     }
     if (ped.wait > 0) { ped.wait -= dt; ped.speed = 0; continue; }
     if (rng() < dt * 0.15) ped.wait = range(rng, 1, 4);
-    if (rng() < dt * 0.2) { ped.axis = ped.axis === 'h' ? 'v' : 'h'; ped.dir *= rng() < 0.5 ? 1 : -1; }
+    if (rng() < dt * 0.2) {
+      ped.axis = ped.axis === 'h' ? 'v' : 'h';
+      ped.dir *= rng() < 0.5 ? 1 : -1;
+    }
     const a = ped.axis === 'h' ? (ped.dir > 0 ? 0 : Math.PI) : (ped.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
     ped.angle = a;
     let nx = ped.x + Math.cos(a) * ped.walkSpeed * dt;
@@ -75,7 +85,7 @@ export function stepPeds(state, dt, rng) {
     ped.speed = ped.walkSpeed;
     ped.walkPhase += dt * ped.walkSpeed * 0.06;
   }
-  // A car hitting a ped at speed knocks them down (and the driver gets heat).
+  // Car-vs-ped hits.
   for (const car of state.cars) {
     if (car.dead || Math.abs(car.speed) < 80) continue;
     for (const ped of state.peds) {

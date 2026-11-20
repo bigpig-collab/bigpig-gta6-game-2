@@ -1,4 +1,4 @@
-// Solmar City 3D — entry point: screens, fixed-step loop, input wiring,
+// Solmar City v3 — entry point: screens, fixed-step loop, input wiring,
 // screenshot staging, and the error trap the verifier looks for.
 import * as THREE from 'three';
 import { STEP } from './config.js';

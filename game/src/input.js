@@ -1,5 +1,5 @@
-// Keyboard + mouse input. Keys are tracked by code; the game reads a
-// plain input snapshot each frame. Dragging the mouse orbits the camera.
+// Keyboard + mouse input. Keys are tracked by code and read back as a plain
+// snapshot each frame; dragging the mouse orbits the chase camera.
 export function createInput(canvas) {
   const keys = new Set();
   const input = {
@@ -9,17 +9,6 @@ export function createInput(canvas) {
     mouseX: 0, mouseY: 0, mouseDown: false,
     camYaw: 0, camPitch: 0.32,
     pressed: new Set(),
-  };
-  const codeMap = {
-    KeyW: 'up', ArrowUp: 'up',
-    KeyS: 'down', ArrowDown: 'down',
-    KeyA: 'left', ArrowLeft: 'left',
-    KeyD: 'right', ArrowRight: 'right',
-    ShiftLeft: 'run', ShiftRight: 'run',
-    KeyE: 'interact',
-    KeyF: 'punch',
-    Space: 'brake',
-    KeyP: 'pause', Escape: 'pause',
   };
   function refresh() {
     input.up = keys.has('KeyW') || keys.has('ArrowUp');
@@ -48,10 +37,17 @@ export function createInput(canvas) {
       input.camPitch += (e.clientY - lastY) * 0.003;
       input.camPitch = Math.max(0.08, Math.min(1.1, input.camPitch));
     }
-    lastX = e.clientX; lastY = e.clientY;
+    lastX = e.clientX;
+    lastY = e.clientY;
   });
   canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { input.mouseDown = true; input.pressed.add('Mouse0'); dragging = true; lastX = e.clientX; lastY = e.clientY; }
+    if (e.button === 0) {
+      input.mouseDown = true;
+      input.pressed.add('Mouse0');
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    }
   });
   window.addEventListener('mouseup', () => { input.mouseDown = false; dragging = false; });
   input.consume = (code) => {
@@ -62,8 +58,8 @@ export function createInput(canvas) {
   return input;
 }
 
-// A scripted input object for the screenshot autopilot: same shape as the
-// live input, but driven by shots.js.
+// A scripted input for the screenshot autopilot: same shape as live input,
+// driven by shots.js instead of the keyboard.
 export function scriptedInput() {
   return {
     up: false, down: false, left: false, right: false,
