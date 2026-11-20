@@ -1,68 +1,59 @@
-# Solmar City — 3D open-world crime game
+# Solmar City
 
 [![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 [![rank](https://make.fun/badge/gta6-01/bigpig-collab/bigpig-gta6-game-2/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 [![reward](https://make.fun/badge/gta6-01/bigpig-collab/bigpig-gta6-game-2/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
-A sun-soaked 3D open-world crime game built for the
-[make.fun gta6-01 bounty](https://make.fun/bounty/gta6-01) — a fresh rebuild
-in three.js (WebGL, third-person chase camera) of the Solmar City story.
+**Solmar City** is a 3D open-world crime game that runs in a desktop browser
+from static files — no build step, no network request. A sun-soaked coastal
+city, 3200×2400 units of roads, towers, suburbs, a park, a beach and a port,
+all generated from a seed so the same seed always builds the same city.
 
-## The game
+## Play
 
-You are back in Solmar City, a fictional coastal city: downtown glass
-towers, suburbs, a park with a pond, a beachfront with palms and umbrellas,
-and container docks at the port. Mama Rosa has six jobs for you — from
-borrowing a sports car to the big score — with free roam between missions.
+Open `game/index.html` through any static server (`node serve.ts`, then
+http://localhost:8080) and press Enter.
 
-- **On foot:** WASD move, Shift run, drag the mouse to orbit the camera,
-  F punch, click to shoot the pistol (ammo, tracers, muzzle flash).
-- **Driving:** E to steal / enter any car, arcade handling with handbrake
-  (Space). Six models — sedan, taxi, truck, van, sports, police — each with
-  its own top speed, acceleration and turning, plus damage, smoke and brake
-  lights.
-- **The city lives:** traffic follows the road grid and turns at junctions,
-  pedestrians walk the sidewalks and flee gunfire and crashes.
-- **Wanted 1–5 stars:** crime draws police cars that chase and ram, and foot
-  cops who pursue and shoot. Get busted (caught on foot at 3+ stars) or
-  wasted (0 HP) and you wake at the station or hospital, minus a fine. Lose
-  the cops and the heat cools.
-- **Missions:** the six-job Mama Rosa chain — Back in Town ($150), Borrowed
-  Wheels ($300), The Pickup ($400), Heat Wave ($500), Dockside Deal ($600),
-  The Big Score ($1000) — with dialogue, objective banner, minimap blip and
-  cash rewards.
-- **HUD + minimap:** wanted stars, HP bar, money, ammo, speed and car model,
-  objective bar, dialogue box, mission banners, and a live top-down minimap
-  with roads, districts, the pulsing mission blip, police and gang blips.
-- **Save:** stand by the green Safehouse to save; progress resumes on reload.
-- **Sound:** fully synthesised WebAudio — engine hum pitched by speed,
-  sirens, gunshots, cash and mission stingers, and a synthwave radio loop.
-  M mutes.
+- **On foot:** WASD to walk, Shift to run, drag the mouse to look around,
+  F to punch, click to fire the pistol, E to enter or exit a car.
+- **Driving:** six cars to steal and drive — sedan, taxi, truck, van, sports
+  car and police interceptor — with arcade handling, handbrake on Space,
+  damage, smoke, brake lights and a pitched engine hum.
+- **The city lives:** 14 traffic cars follow the road grid, 25 pedestrians
+  walk the sidewalks and flee from gunfire, parked cars line the kerbs.
+- **Wanted:** 1–5 stars. Steal cars, hit peds or shoot cops and the heat
+  rises; police cars chase and ram, foot cops spawn on foot. Get busted or
+  wasted and you wake up at the police station or the hospital, $150 poorer.
+- **The story:** six jobs from Mama Rosa — from "Back in Town" ($150) to
+  "The Big Score" ($1,000) — with dialogue, a pulsing minimap blip and a
+  money trail from $120 to $3,070.
+- **HUD and minimap:** wanted stars, health, money, ammo, speed, objective
+  bar, dialogue box, and a live 2D minimap with police and rival blips.
+- **Save:** walk into the safehouse and your money and mission progress are
+  stored in local storage. M mutes all sound.
 
-## Play it
+## Screenshots
 
-```sh
-node serve.ts   # then open http://localhost:8080
-```
+Four staged renders of the game itself, all at 1280×800:
 
-No build step, no network requests, no external assets: `game/` is static
-files, three.js vendored under `game/vendor/three/`. Everything — city,
-names, art, sounds — is original.
+1. **Chase (cover)** — a 3-star police chase, police cars ahead of the
+   player's sports car, HUD, minimap, objective and dialogue in one frame.
+2. **Street** — mission complete at Rosa's Bar, reward banner visible.
+3. **Drive** — beachfront cruise in the sports car at speed, with traffic,
+   palms and sea.
+4. **Fight** — port shootout with the drop-the-rivals counter visible.
 
-## How it is built
+## Structure
 
-`game/src/` is split by job: `config` (tuning + places), `random` (seeded
-RNG), `city` (road grid, districts, buildings), `render3d` (three.js scene,
-camera, lighting, shadows), `vehicles` (driving + traffic AI), `player`,
-`police` (wanted + pursuit), `peds`, `missions` (the 6-job chain), `world`
-(fixed-step simulation), `hud` (DOM HUD + minimap), `audio` (WebAudio
-synth), `save`, `input`, `shots` (staged screenshot scenes), `main`
-(screens + game loop).
+- `game/src/` — one module per concern: world layout, city meshes, renderer,
+  vehicles, player, traffic, police, combat, missions, HUD, minimap, audio,
+  save/load, input, seeded random and staged screenshots.
+- `game/vendor/` — three.js (vendored, minified) and its license.
+- `main.ts` — the entry program: copies `game/` and `screenshots/` to the
+  output directory and writes `dossier.json` (Node 22, stdlib only).
+- `serve.ts` — a tiny static server for local testing.
+- `screenshots/` — four staged renders of the game itself.
 
-Screenshots are staged scenes (`?shot=chase|street|drive|fight&seed=1`)
-that play the real rules forward from a fresh world, then freeze — real
-WebGL renders, never edited.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+Built for the [Make GTA 6 bounty](https://make.fun/bounty/gta6-01) on
+make.fun. Everything here is original: our own city, characters, vehicles,
+names, story, art and sounds — nothing from any commercial game.
