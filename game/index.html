@@ -3,99 +3,41 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Solmar City — open-world crime game</title>
+<link rel="icon" href="data:,">
+<title>Solmar City — an open-world crime story</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; font-family: system-ui, sans-serif; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  #fatal { display: none; position: fixed; top: 8px; left: 8px; right: 8px; z-index: 50;
-    background: #c0392b; color: #fff; padding: 8px 12px; font: 14px monospace; border-radius: 4px; }
-  #hud { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 10; color: #fff; }
-  #hud-top { position: absolute; top: 10px; left: 12px; text-shadow: 0 1px 3px #000; }
-  #hud-stars { font-size: 26px; letter-spacing: 2px; }
-  #hud-health { width: 180px; height: 12px; background: rgba(0,0,0,0.55); border: 1px solid #fff; border-radius: 6px; margin-top: 4px; overflow: hidden; }
-  #hud-health-fill { height: 100%; width: 100%; background: #2ecc71; }
-  #hud-health-text { font-size: 13px; }
-  #hud-money { font-size: 20px; font-weight: 700; color: #7dff9a; margin-top: 4px; }
-  #hud-ammo, #hud-speed { font-size: 14px; }
-  #hud-objective { position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.6); padding: 8px 14px; border-radius: 6px; font-size: 15px; max-width: 46vw; text-align: center; }
-  #minimap { position: absolute; top: 10px; right: 12px; width: 190px; height: 142px;
-    border: 2px solid rgba(255,255,255,0.8); border-radius: 6px; background: #1d3a24; }
-  #hud-message { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%);
-    font-size: 15px; text-shadow: 0 1px 3px #000; }
-  #hud-dialogue { display: none; position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.75); border-left: 4px solid #ffe600; padding: 10px 16px; border-radius: 6px;
-    font-size: 15px; max-width: 640px; text-align: center; }
-  #hud-banner { display: none; position: absolute; top: 38%; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.7); color: #ffe600; padding: 12px 22px; border-radius: 8px;
-    font-size: 22px; font-weight: 800; text-align: center; }
-  #hud-controls { position: absolute; bottom: 10px; left: 12px; font-size: 12px; opacity: 0.75; text-shadow: 0 1px 2px #000; }
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
-    background: rgba(8, 12, 24, 0.55); color: #fff; text-align: center; }
-  .overlay .panel { background: rgba(10, 16, 32, 0.82); border: 2px solid #ffe600; border-radius: 12px;
-    padding: 28px 40px; max-width: 620px; }
-  .overlay h1 { margin: 0 0 6px; font-size: 44px; letter-spacing: 3px; color: #ffe600; }
-  .overlay h2 { margin: 0 0 10px; font-size: 34px; letter-spacing: 2px; color: #ff5b5b; }
-  .overlay p { margin: 8px 0; font-size: 15px; line-height: 1.5; }
-  .overlay .tag { color: #7dff9a; font-weight: 700; letter-spacing: 1px; }
-  .overlay .keys { font-size: 13px; opacity: 0.85; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1622; font-family: 'Segoe UI', system-ui, sans-serif; }
+  #game { display: block; width: 100vw; height: 100vh; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; z-index: 5; }
+  #hud-top { position: absolute; top: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+  #wanted { font-size: 30px; letter-spacing: 4px; color: #ffd76a; text-shadow: 0 2px 6px #000; }
+  #money { font-size: 30px; font-weight: 800; color: #7dff9a; text-shadow: 0 2px 6px #000; }
+  #health-wrap { position: absolute; top: 58px; left: 16px; width: 220px; height: 18px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.4); }
+  #health-bar { height: 100%; width: 100%; background: #37d67a; }
+  #health-num { position: absolute; right: 6px; top: 0; font-size: 13px; font-weight: 700; line-height: 18px; text-shadow: 0 1px 3px #000; }
+  #ammo { position: absolute; top: 84px; left: 16px; font-size: 18px; font-weight: 700; text-shadow: 0 2px 4px #000; }
+  #speed { position: absolute; right: 16px; bottom: 18px; font-size: 34px; font-weight: 800; text-align: right; text-shadow: 0 2px 6px #000; }
+  #speed span { font-size: 15px; font-weight: 600; }
+  #car-name { font-size: 15px; font-weight: 600; color: #ffd76a; }
+  #objective { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); max-width: 46vw; background: rgba(10,18,28,.72); border: 1px solid rgba(255,215,106,.6); padding: 8px 16px; font-size: 16px; font-weight: 600; text-align: center; }
+  #dialogue { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); max-width: 640px; background: rgba(10,18,28,.85); border-left: 4px solid #ff9f1c; padding: 12px 18px; font-size: 17px; font-style: italic; display: none; }
+  #banner { position: absolute; left: 50%; top: 34%; transform: translate(-50%,-50%); font-size: 44px; font-weight: 900; color: #ffd76a; text-shadow: 0 3px 12px #000, 0 0 30px rgba(255,180,0,.5); display: none; text-align: center; white-space: nowrap; }
+  #minimap { position: fixed; right: 16px; top: 110px; width: 230px; height: 176px; border: 2px solid rgba(255,255,255,.55); z-index: 6; background: #1d2b1f; }
+  #title-screen, #pause-screen, #over-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,12,20,.72); pointer-events: none; }
+  #title-screen h1 { font-size: 84px; margin: 0; letter-spacing: 8px; color: #ffd76a; text-shadow: 0 4px 24px rgba(255,180,0,.6); }
+  #title-screen p { font-size: 20px; margin: 10px 0; }
+  #title-screen .keys { font-size: 16px; color: #cfe6ff; line-height: 1.8; text-align: center; }
+  .press { font-size: 22px !important; font-weight: 800; color: #7dff9a; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  #pause-screen h2, #over-screen h2 { font-size: 64px; margin: 0; color: #ff5040; letter-spacing: 6px; }
+  #over-screen p, #pause-screen p { font-size: 20px; }
 </style>
 <script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.min.js"
-  }
-}
+{ "imports": { "three": "./vendor/three.module.min.js" } }
 </script>
 </head>
 <body>
-<canvas id="game" aria-label="Solmar City: 3D open-world crime game"></canvas>
-<div id="fatal" role="alert"></div>
-<div id="hud">
-  <div id="hud-top">
-    <div id="hud-stars">☆☆☆☆☆</div>
-    <div id="hud-health"><div id="hud-health-fill"></div></div>
-    <div id="hud-health-text">HP 100</div>
-    <div id="hud-money">$120</div>
-    <div id="hud-ammo">Ammo 48</div>
-    <div id="hud-speed"></div>
-  </div>
-  <div id="hud-objective">◆ Drive to Rosa's Bar</div>
-  <canvas id="minimap" width="190" height="142"></canvas>
-  <div id="hud-message"></div>
-  <div id="hud-dialogue"></div>
-  <div id="hud-banner"></div>
-  <div id="hud-controls">WASD move/drive · Shift run · E car · F punch · Click shoot · Drag mouse orbit camera · Space handbrake · P pause · M mute</div>
-</div>
-<div id="title-screen" class="overlay">
-  <div class="panel">
-    <h1>SOLMAR CITY</h1>
-    <p class="tag">A SUN-SOAKED OPEN-WORLD CRIME STORY · 3D</p>
-    <p>You are back in Solmar City. Mama Rosa has work for you: six jobs, from
-    a borrowed sports car to the big score. Steal cars, lose the cops, and
-    don't get caught.</p>
-    <p class="keys">WASD move / drive · Shift run · E enter car · F punch · Click shoot<br>
-    Drag mouse to orbit the camera · Space handbrake · P pause · M mute</p>
-    <p><b>Press Enter or click to start</b></p>
-    <p class="keys">Save at the Safehouse (green house). Free roam between missions.</p>
-  </div>
-</div>
-<div id="pause-screen" class="overlay" style="display:none">
-  <div class="panel">
-    <h1>PAUSED</h1>
-    <p>Solmar waits for no one — except right now.</p>
-    <p><b>Press P or Esc to resume</b></p>
-  </div>
-</div>
-<div id="over-screen" class="overlay" style="display:none">
-  <div class="panel">
-    <h2 id="over-title">WASTED!</h2>
-    <p id="over-text"></p>
-    <p><b>Press Enter to continue</b></p>
-  </div>
-</div>
-<p id="status" role="status" aria-live="polite"></p>
+<canvas id="game"></canvas>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
