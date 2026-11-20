@@ -1,74 +1,75 @@
-// Keyboard + mouse input. Keys are tracked by code and read back as a plain
-// snapshot each frame; dragging the mouse orbits the chase camera.
-export function createInput(canvas) {
-  const keys = new Set();
-  const input = {
-    up: false, down: false, left: false, right: false,
-    run: false, interact: false, punch: false, shoot: false,
-    brake: false, pause: false,
-    mouseX: 0, mouseY: 0, mouseDown: false,
-    camYaw: 0, camPitch: 0.32,
-    pressed: new Set(),
-  };
-  function refresh() {
-    input.up = keys.has('KeyW') || keys.has('ArrowUp');
-    input.down = keys.has('KeyS') || keys.has('ArrowDown');
-    input.left = keys.has('KeyA') || keys.has('ArrowLeft');
-    input.right = keys.has('KeyD') || keys.has('ArrowRight');
-    input.run = keys.has('ShiftLeft') || keys.has('ShiftRight');
-    input.brake = keys.has('Space');
-  }
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') e.preventDefault();
-    if (!e.repeat) input.pressed.add(e.code);
-    keys.add(e.code);
-    refresh();
-  });
-  window.addEventListener('keyup', (e) => { keys.delete(e.code); refresh(); });
-  window.addEventListener('blur', () => { keys.clear(); refresh(); });
-  let dragging = false;
-  let lastX = 0; let lastY = 0;
-  canvas.addEventListener('mousemove', (e) => {
-    const r = canvas.getBoundingClientRect();
-    input.mouseX = e.clientX - r.left;
-    input.mouseY = e.clientY - r.top;
-    if (dragging) {
-      input.camYaw -= (e.clientX - lastX) * 0.005;
-      input.camPitch += (e.clientY - lastY) * 0.003;
-      input.camPitch = Math.max(0.08, Math.min(1.1, input.camPitch));
-    }
-    lastX = e.clientX;
-    lastY = e.clientY;
-  });
-  canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-      input.mouseDown = true;
-      input.pressed.add('Mouse0');
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    }
-  });
-  window.addEventListener('mouseup', () => { input.mouseDown = false; dragging = false; });
-  input.consume = (code) => {
-    if (input.pressed.has(code)) { input.pressed.delete(code); return true; }
-    return false;
-  };
-  input.endFrame = () => { input.pressed.clear(); };
-  return input;
-}
-
-// A scripted input for the screenshot autopilot: same shape as live input,
-// driven by shots.js instead of the keyboard.
-export function scriptedInput() {
+// Keyboard and mouse input for Solmar City. Tracks held keys, drag orbit
+// and clicks; the game loop reads the state each frame.
+export function makeInput() {
   return {
-    up: false, down: false, left: false, right: false,
-    run: false, interact: false, punch: false, shoot: false,
-    brake: false, pause: false,
-    mouseX: 0, mouseY: 0, mouseDown: false,
-    camYaw: 0, camPitch: 0.32,
-    pressed: new Set(),
-    consume: () => false,
-    endFrame: () => {},
+    keys: new Set(),
+    mouseDown: false, clicked: false, clickX: 0, clickY: 0,
+    dragDX: 0, dragDY: 0, dragging: false,
+    lastX: 0, lastY: 0,
+    paused: false,
   };
+}
+export function bindInput(input, el) {
+  const keyMap = {
+    KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
+    KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
+    ShiftLeft: 'run', ShiftRight: 'run', Space: 'hand',
+    KeyF: 'punch', KeyE: 'enter', KeyM: 'mute', KeyR: 'radio',
+  };
+  window.addEventListener('keydown', (e) => {
+    const name = keyMap[e.code];
+    if (name) { input.keys.add(name); if (name === 'hand' || name === 'punch') e.preventDefault(); }
+    if (e.code === 'Enter') input.keys.add('start');
+    if (e.code === 'Escape' || e.code === 'KeyP') input.keys.add('pause');
+  });
+  window.addEventListener('keyup', (e) => {
+    const name = keyMap[e.code];
+    if (name) input.keys.delete(name);
+    if (e.code === 'Enter') input.keys.delete('start');
+    if (e.code === 'Escape' || e.code === 'KeyP') input.keys.delete('pause');
+  });
+  el.addEventListener('mousedown', (e) => {
+    input.mouseDown = true; input.dragging = true;
+    input.lastX = e.clientX; input.lastY = e.clientY;
+  });
+  window.addEventListener('mouseup', (e) => {
+    input.mouseDown = false; input.dragging = false;
+    // A short click (not a drag) fires the pistol.
+    if (Math.hypot(e.clientX - input.lastX, e.clientY - input.lastY) < 6) {
+      input.clicked = true; input.clickX = e.clientX; input.clickY = e.clientY;
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!input.dragging) return;
+    input.dragDX += e.clientX - input.lastX;
+    input.dragDY += e.clientY - input.lastY;
+    input.lastX = e.clientX; input.lastY = e.clientY;
+  });
+  window.addEventListener('blur', () => input.keys.clear());
+}
+export function driveInput(input) {
+  return {
+    throttle: (input.keys.has('up') ? 1 : 0) - (input.keys.has('down') ? 0.4 : 0),
+    brake: input.keys.has('down') ? 1 : 0,
+    steer: (input.keys.has('left') ? -1 : 0) + (input.keys.has('right') ? 1 : 0),
+    hand: input.keys.has('hand') ? 1 : 0,
+  };
+}
+export function walkInput(input) {
+  return {
+    fwd: (input.keys.has('up') ? 1 : 0) - (input.keys.has('down') ? 1 : 0),
+    strafe: (input.keys.has('right') ? 1 : 0) - (input.keys.has('left') ? 1 : 0),
+    run: input.keys.has('run') ? 1 : 0,
+  };
+}
+export function consumeClick(input) {
+  if (!input.clicked) return null;
+  input.clicked = false;
+  return { x: input.clickX, y: input.clickY };
+}
+// Take a one-shot key out of the set and say whether it was pressed.
+export function consumeKey(input, name) {
+  if (!input.keys.has(name)) return false;
+  input.keys.delete(name);
+  return true;
 }
