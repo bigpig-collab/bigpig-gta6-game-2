@@ -1,5 +1,5 @@
-// Seeded randomness (mulberry32) and tiny geometry helpers. One seed drives
-// the city, the traffic and the staged screenshots, so a run is repeatable.
+// Seeded randomness (mulberry32) plus small geometry helpers. One seed
+// drives the city, the traffic and the staged screenshots, so a run repeats.
 export function makeRng(seed) {
   let a = seed >>> 0;
   return function next() {
@@ -26,7 +26,7 @@ export function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 export function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
 export function angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); }
 
-// Shortest signed rotation from angle a toward target t, capped at maxStep.
+// Shortest signed turn from angle a toward target t, capped at maxStep.
 export function turnToward(a, t, maxStep) {
   let d = t - a;
   while (d > Math.PI) d -= Math.PI * 2;

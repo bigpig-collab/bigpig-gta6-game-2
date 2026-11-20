@@ -1,6 +1,6 @@
-// City layout: a road grid, districts, buildings, trees and props. All of it
+// City layout: road grid, districts, buildings, trees and props. All of it
 // is deterministic from the seed — roads every BLOCK, downtown towers in the
-// middle, beach on the east edge, port along the south edge, park west.
+// middle, beach on the east edge, port along the south edge, park to the west.
 import { WORLD_W, WORLD_H, BLOCK, ROAD_W } from './config.js';
 import { makeRng, pick, range } from './random.js';
 

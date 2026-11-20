@@ -61,6 +61,8 @@ export function stepPolice(state, dt, rng) {
     spawnPoliceCar(state, rng);
     state.spawnCd = 1.6;
   }
+  // Foot cops only spawn while the player is on foot, and the shared
+  // spawn cooldown (2.5 s) gates them so they cannot flood in at once.
   if (state.wanted >= 2 && !p.inCar && state.cops.filter((c) => c.hp > 0 && c.isCop).length < 2 && state.spawnCd <= 0 && rng() < dt * 0.4) {
     spawnFootCop(state, rng);
     state.spawnCd = 2.5;
@@ -81,6 +83,7 @@ export function stepPolice(state, dt, rng) {
     if (d < 56) {
       const pcar = state.cars.find((c) => c.id === p.inCar);
       if (pcar) {
+        // Ram damage to the player's car: 10 HP/s.
         pcar.hp -= 10 * dt;
         if (pcar.hp <= 0) {
           pcar.hp = 0;

@@ -1,5 +1,5 @@
-// Solmar City v3 — tuning and fixed story locations. Everything numeric the
-// simulation needs lives in this one file so balance can be tuned in place.
+// Solmar City v4 — tuning constants and the fixed story locations.
+// Every number the simulation balances on lives here, in one place.
 export const WORLD_W = 3200;
 export const WORLD_H = 2400;
 export const ROAD_W = 96;
@@ -19,7 +19,7 @@ export const PLAYER = {
   startAmmo: 48,
 };
 
-// Arcade car tuning, per model: top speed, acceleration, steering bite, hull.
+// Arcade handling per model: top speed, acceleration, steering, hull.
 export const CAR_MODELS = {
   sedan:  { name: 'Sedan',  top: 330, accel: 210, turn: 2.6, hp: 100, colors: ['#c0392b', '#2e86c1', '#7d8a99', '#e8e8e8'] },
   taxi:   { name: 'Taxi',   top: 320, accel: 205, turn: 2.6, hp: 100, colors: ['#f5c518'] },
@@ -31,9 +31,9 @@ export const CAR_MODELS = {
 
 export const WANTED_MAX = 5;
 export const MONEY_START = 120;
-export const SAVE_KEY = 'solmar-city-save-v3';
+export const SAVE_KEY = 'solmar-city-save-v4';
 
-// Story spots in world coordinates: x grows east, y grows south.
+// Story spots, world coords: x east, y south.
 export const PLACES = {
   bar:       { x: 1180, y: 780,  label: "Rosa's Bar" },
   safehouse: { x: 420,  y: 420,  label: 'Safehouse' },
