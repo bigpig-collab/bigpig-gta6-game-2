@@ -1,4 +1,4 @@
-// Handover script for the Solmar City v3 entry in make.fun's gta6-01 bounty.
+// Handover script for the Solmar City v4 entry in make.fun's gta6-01 bounty.
 // Node 22, standard library only. The game is a folder of static files
 // (game/index.html plus its ES modules and the vendored three.js build, no
 // network calls). This script copies that folder and the screenshots folder
